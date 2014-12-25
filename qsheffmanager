@@ -1,0 +1,737 @@
+#!/usr/bin/python
+"""
+Copyright (C) 2005 M.Ali VARDAR - ali@linuxprogramlama.com
+ 
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+
+-------------------------------------------------
+qSheff Manager 2.0 for EnderUNIX's qSheff 2.1-R1
+-------------------------------------------------
+qSheff Manager home page http://www.linuxprogramlama.com
+qSheff home page http://www.enderunix.org/qsheff
+
+todo
+----
+if we found bugs and baris make a new release
+----
+"""
+
+
+import curses, os
+
+base_etc="/usr/local/etc/qsheff-II/"
+#----------------------------------------------------------------
+def main_menu_list(stdscr):
+    main_menu=('Restricted Attachs', 'Spam Rules', 'Ignore List', 'qSheff Configuration', 'About', 'Quit')
+    sabit=5;sabitt=30
+
+    win=stdscr.subwin(23, 79, 0, 0)
+    win.clear()
+    win.box()
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    win.addstr(1, 1, "EnderUNIX's qSheff Manager 2.0 for qSheff 2.1-R1".center(77), curses.color_pair(1) )
+    win.addstr(22, 1, "www.linuxprogramlama.com".center(77), curses.color_pair(1) )
+    win.addstr(sabit-1, sabitt, "Main Control".center(20), curses.color_pair(1) )
+    for satir in range(len(main_menu)):	win.addstr(satir+sabit, sabitt, main_menu[satir].center(20), curses.color_pair(2))
+    win.addstr(sabit, sabitt, main_menu[0].center(20), curses.A_REVERSE)
+    win.refresh()
+    satno=0;
+    callme=0
+    while 1:    
+	c = stdscr.getch()
+    	if c == ord('q'): callme=0; break
+	elif c == curses.KEY_UP:
+	    if satno>0:  
+		win.addstr(satno+sabit, sabitt, main_menu[satno].center(20), curses.color_pair(2))
+		satno = satno-1
+		win.addstr(satno+sabit, sabitt, main_menu[satno].center(20), curses.A_REVERSE)
+		win.refresh()
+	elif c == curses.KEY_DOWN: 
+	    if satno<len(main_menu)-1:  
+		win.addstr(satno+sabit, sabitt, main_menu[satno].center(20), curses.color_pair(2))
+		satno = satno+1
+		win.addstr(satno+sabit, sabitt, main_menu[satno].center(20), curses.A_REVERSE)
+		win.refresh()
+	elif c == 10: #curses.KEY_ENTER: 
+	    if satno==0: attach_list(stdscr);callme=1; break  	# attach 
+	    elif satno==1: rules_list(stdscr);callme=1;break 	# rules
+	    elif satno==2: ignore_list(stdscr);callme=1;break 	# discard
+	    elif satno==3: configuration(stdscr);callme=1;break # qsheff config
+	    elif satno==4: msgdialog(stdscr, '               qSheff Manager \n              www.linuxprogramlama.com');callme=1;break 	# about
+	    elif satno==5: 
+		if msgyesno(stdscr, "Are you sure want to exit?") == 1: callme=0; break # exit
+		else: callme=1;break
+        
+    if callme==0:win.erase(); return
+    else: main_menu_list(stdscr);return
+
+#----------------------------------------------------------------
+def attach_list(stdscr):
+
+    attach_menu=[]
+    sabit=2;sabitt=7
+    
+    win=stdscr.subwin(20, 76, 2, 1)
+    win.clear()    
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    win.addstr(1, 1, "Attach Control Menu".center(70), curses.color_pair(1))
+    win.addstr(18, 2, "n->New   d->Delete   h->Help   q->Back   PgUP-PgDown".center(70), curses.color_pair(1))
+    
+    try:
+	file=open(base_etc+"qsheff.attach","r")
+	attach_menu=file.readlines();
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't find qsheff.attach file!")	
+	return
+
+    if len(attach_menu)<15: 
+	for satir in range(0,len(attach_menu)):win.addstr(satir+sabit, sabitt, attach_menu[satir].ljust(50), curses.color_pair(2) )	
+    else: 
+	for satir in range(0,15):win.addstr(satir+sabit, sabitt, attach_menu[satir].ljust(50), curses.color_pair(2) )
+    
+    win.addstr(sabit, sabitt, attach_menu[0], curses.A_REVERSE)
+    win.box()
+    win.refresh()
+
+    if len(attach_menu)<15: 
+	sattot=len(attach_menu)-1
+    else: 
+	sattot=14
+     
+    satno=0; v_start=0;  v_end=len(attach_menu);  callme=0
+        
+    while 1:    
+	c = stdscr.getch()
+    	if c == ord('q'): callme=0; break
+	elif c == curses.KEY_UP:
+	    if satno>0:
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.color_pair(2))
+		satno=satno-1; 
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_DOWN: 
+	    if satno<sattot:
+		#msgdialog(stdscr, str(satno)+"  "+str(sattot) )
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.color_pair(2))
+		satno=satno+1; 
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_PPAGE: # page up
+	    sattot=len(attach_menu)
+	    if v_start>0: 
+		sattot=14
+		v_start=v_start-(sattot+1)
+		satno=0
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, attach_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()		
+	    else: curses.beep()
+	elif c == curses.KEY_NPAGE: # page down
+	    #sattot=len(attach_menu)
+	    if v_end-(v_start+15)<15:		
+		if v_end-(v_start+15)>0: 
+		    sattot=v_end-(v_start+15+1)
+		    v_start=v_start+15
+		    #msgdialog(stdscr, str(sattot) )
+	    	    satno=0
+		    for satir in range(0, (v_end-v_start) ):win.addstr(satir+sabit, sabitt, attach_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		    for satir in range(sattot+1,15):win.addstr(satir+sabit, sabitt, "                          ", curses.color_pair(2) )
+		    win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.A_REVERSE)
+		    win.box()
+		    win.refresh()
+		else: curses.beep()
+	    else: 
+		satno=0
+		v_start=v_start+15
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, attach_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, attach_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()	    
+	elif c == ord('h'): # help
+	    attach_menu_help(stdscr)
+	    callme=1
+	    break	    
+	elif c == ord('n'): # new
+	    aa=msgedit(stdscr, "New rule for attach control sample: .zip")	    
+	    attach_menu.insert(v_start+satno, aa+"\n")
+	    try:
+		file=open(base_etc+"qsheff.attach","w")
+		attach_menu=file.writelines(attach_menu);
+    		file.close()
+	    except:
+		msgdialog(stdscr, "Can't write qsheff.attach file!")		    
+	    callme=1
+	    break	    
+	elif c == ord('d'): # delete
+	    if msgyesno(stdscr, "Are you sure want to delete?")==1:
+		attach_menu.remove(attach_menu[v_start+satno])	    
+		try:
+    		    file=open(base_etc+"qsheff.attach","w")
+		    attach_menu=file.writelines(attach_menu);
+    		    file.close()
+		except:
+		    msgdialog(stdscr, "Can't write qsheff.attach file!")		    
+	    callme=1
+	    break	    
+        
+    if callme==0: win.erase(); return
+    else: callme=0; attach_list(stdscr);return    
+#----------------------------------------------------------------
+def rules_list(stdscr):
+    rules_menu=[]
+    sabit=2;sabitt=7
+    win=stdscr.subwin(20, 76, 2, 1)
+    win.clear()    
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    win.addstr(1, 1, "qSheff Rules Control Menu".center(70), curses.color_pair(1))
+    win.addstr(18, 2, "n->New   d->Delete   h->Help   q->Back   PgUP-PgDown".center(70), curses.color_pair(1))
+
+    try:
+        file=open(base_etc+"qsheff.rules","r")
+	rules_menu=file.readlines();
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't find qsheff.rules file!")	
+	return
+
+    if len(rules_menu)<15: 
+	for satir in range(0,len(rules_menu)):win.addstr(satir+sabit, sabitt, rules_menu[satir].ljust(50), curses.color_pair(2) )	
+    else: 
+	for satir in range(0,15):win.addstr(satir+sabit, sabitt, rules_menu[satir].ljust(50), curses.color_pair(2) )
+    
+    win.addstr(sabit, sabitt, rules_menu[0], curses.A_REVERSE)
+    win.box()
+    win.refresh()
+
+    if len(rules_menu)<15: 
+	sattot=len(rules_menu)-1
+    else: 
+	sattot=14
+     
+    satno=0;    
+    v_start=0;    
+    v_end=len(rules_menu);  
+    callme=0
+        
+    while 1:    
+	c = stdscr.getch()
+    	if c == ord('q'): callme=0; break
+	elif c == curses.KEY_UP:
+	    if satno>0:
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.color_pair(2))
+		satno=satno-1; 
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_DOWN: 
+	    if satno<sattot:
+		#msgdialog(stdscr, str(satno)+"  "+str(sattot) )
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.color_pair(2))
+		satno=satno+1; 
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_PPAGE: # page up
+	    sattot=len(rules_menu)
+	    if v_start>0: 
+		sattot=14
+		v_start=v_start-(sattot+1)
+		satno=0
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, rules_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()		
+	    else: curses.beep()
+	elif c == curses.KEY_NPAGE: # page down
+	    #sattot=len(rules_menu)
+	    if v_end-(v_start+15)<15:		
+		if v_end-(v_start+15)>0: 
+		    sattot=v_end-(v_start+15+1)
+		    v_start=v_start+15
+		    #msgdialog(stdscr, str(sattot) )
+	    	    satno=0
+		    for satir in range(0, (v_end-v_start) ):win.addstr(satir+sabit, sabitt, rules_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		    for satir in range(sattot+1,15):win.addstr(satir+sabit, sabitt, "                          ", curses.color_pair(2) )
+		    win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.A_REVERSE)
+		    win.box()
+		    win.refresh()
+		else: curses.beep()
+	    else: 
+		satno=0
+		v_start=v_start+15
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, rules_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, rules_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()	    
+	elif c == ord('h'): 
+		rules_menu_help(stdscr)
+		callme=1
+		break
+	elif c == ord('n'): # new
+	    aa=msgedit(stdscr, "New rule for content checking a:(v?agra)(sex)\n  b: for body h: for header a: for all")
+	    rules_menu.insert(v_start+satno, aa+"\n")
+	    try:
+    		file=open(base_etc+"qsheff.rules","w")
+		rules_menu=file.writelines(rules_menu);
+    		file.close()
+	    except:
+		msgdialog(stdscr, "Can't write qsheff.rules file!")		    
+	    callme=1
+	    break	    
+	elif c == ord('d'): # delete
+	    if msgyesno(stdscr, "Are you sure want to delete?")==1:
+		rules_menu.remove(rules_menu[v_start+satno])	    
+		try:
+    		    file=open(base_etc+"qsheff.rules","w")
+		    rules_menu=file.writelines(rules_menu);
+    		    file.close()
+		except:
+		    msgdialog(stdscr, "Can't write qsheff.rules file!")		    
+	    callme=1
+	    break	    
+    
+    if callme==0: win.erase(); return
+    else: callme=0; rules_list(stdscr);return
+#----------------------------------------------------------------
+def ignore_list(stdscr):
+
+    ignore_menu=[]
+    sabit=2;sabitt=7
+    
+    win=stdscr.subwin(20, 76, 2, 1)
+    win.clear()    
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    win.addstr(1, 1, "Ignore List Control Menu".center(70), curses.color_pair(1))
+    win.addstr(18, 2, "n->New   d->Delete   h->Help   q->Back   PgUP-PgDown".center(70), curses.color_pair(1))
+    
+    try:
+	file=open(base_etc+"qsheff.ignore","r")
+	ignore_menu=file.readlines();
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't find qsheff.ignore file!")	
+	return
+
+    if len(ignore_menu)<15: 
+	for satir in range(0,len(ignore_menu)):win.addstr(satir+sabit, sabitt, ignore_menu[satir].ljust(50), curses.color_pair(2) )	
+    else: 
+	for satir in range(0,15):win.addstr(satir+sabit, sabitt, ignore_menu[satir].ljust(50), curses.color_pair(2) )
+    
+    win.addstr(sabit, sabitt, ignore_menu[0], curses.A_REVERSE)
+    win.box()
+    win.refresh()
+
+    if len(ignore_menu)<15: 
+	sattot=len(ignore_menu)-1
+    else: 
+	sattot=14
+     
+    satno=0; v_start=0;  v_end=len(ignore_menu);  callme=0
+        
+    while 1:    
+	c = stdscr.getch()
+    	if c == ord('q'): callme=0; break
+	elif c == curses.KEY_UP:
+	    if satno>0:
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.color_pair(2))
+		satno=satno-1; 
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_DOWN: 
+	    if satno<sattot:
+		#msgdialog(stdscr, str(satno)+"  "+str(sattot) )
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.color_pair(2))
+		satno=satno+1; 
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()
+	elif c == curses.KEY_PPAGE: # page up
+	    sattot=len(ignore_menu)
+	    if v_start>0: 
+		sattot=14
+		v_start=v_start-(sattot+1)
+		satno=0
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, ignore_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()		
+	    else: curses.beep()
+	elif c == curses.KEY_NPAGE: # page down
+	    #sattot=len(ignore_menu)
+	    if v_end-(v_start+15)<15:		
+		if v_end-(v_start+15)>0: 
+		    sattot=v_end-(v_start+15+1)
+		    v_start=v_start+15
+		    #msgdialog(stdscr, str(sattot) )
+	    	    satno=0
+		    for satir in range(0, (v_end-v_start) ):win.addstr(satir+sabit, sabitt, ignore_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		    for satir in range(sattot+1,15):win.addstr(satir+sabit, sabitt, "                          ", curses.color_pair(2) )
+		    win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.A_REVERSE)
+		    win.box()
+		    win.refresh()
+		else: curses.beep()
+	    else: 
+		satno=0
+		v_start=v_start+15
+		for satir in range(0,15):win.addstr(satir+sabit, sabitt, ignore_menu[v_start+satir].ljust(50), curses.color_pair(2) )
+		win.addstr(satno+sabit, sabitt, ignore_menu[v_start+satno], curses.A_REVERSE)
+		win.box()
+		win.refresh()	    
+	elif c == ord('h'): # help
+	    ignore_menu_help(stdscr)
+	    callme=1
+	    break	    
+	elif c == ord('n'): # new
+	    aa=msgedit(stdscr, "New rule for ignore control sample: .zip")	    
+	    ignore_menu.insert(v_start+satno, aa+"\n")
+	    try:
+		file=open(base_etc+"qsheff.ignore","w")
+		ignore_menu=file.writelines(ignore_menu);
+    		file.close()
+	    except:
+		msgdialog(stdscr, "Can't write qsheff.ignore file!")		    
+	    callme=1
+	    break	    
+	elif c == ord('d'): # delete
+	    if msgyesno(stdscr, "Are you sure want to delete?")==1:
+		ignore_menu.remove(ignore_menu[v_start+satno])	    
+		try:
+    		    file=open(base_etc+"qsheff.ignore","w")
+		    ignore_menu=file.writelines(ignore_menu);
+    		    file.close()
+		except:
+		    msgdialog(stdscr, "Can't write qsheff.ignore file!")		    
+	    callme=1
+	    break	    
+        
+    if callme==0: win.erase(); return
+    else: callme=0; ignore_list(stdscr);return    
+
+
+#----------------------------------------------------------------
+def configuration(stdscr):
+    config_menu=("Black Hole", "Clamd Active", "Header Filter", "Body Filter",
+			"Attach Filter", "Ignore List", "Drop Empty From")
+    config_menu_value=["OFF", "OFF", "OFF", "OFF", "OFF", "OFF", "OFF"]
+    
+    sabit=5;sabitt=20
+
+    win=stdscr.subwin(20, 76, 2, 1)
+    win.clear()    
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    win.addstr(1, 1, " Base Configuration ".center(70), curses.color_pair(1))
+    win.addstr(18, 2, "h->Help       Enter->Change       q->Back".center(70), curses.color_pair(1))
+    win.addstr(17, 2, "You must edit qsheff.conf file for experience".center(70), curses.color_pair(1))
+    
+    #read conf file for values
+    try:
+	file=open(base_etc+"qsheff.conf","r")
+	conf_menu=file.readlines();
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't find qsheff.conf file!")	
+	return
+    
+    for sira in range(0, len(conf_menu)):
+	aa=conf_menu[sira].split("=")
+	if len(aa)>1:
+	    aa[0]=aa[0].replace(" ","")
+	    aa[0]=aa[0].replace(";","")
+	    aa[0]=aa[0].replace("\n","")
+	    aa[1]=aa[1].replace(" ","")
+	    aa[1]=aa[1].replace(";","")
+	    aa[1]=aa[1].replace("\n","")
+    	    
+	    if aa[0]=="enable_blackhole": 
+		if aa[1]=="1":	config_menu_value[0]="ON" 
+		else:	config_menu_value[0]="OFF" 	    
+	    if aa[0]=="enable_clamd": 	
+		if aa[1]=="1":	config_menu_value[1]="ON" 
+		else:	config_menu_value[1]="OFF" 	    
+	    if aa[0]=="enable_header_filter": 
+		if aa[1]=="1":	config_menu_value[2]="ON" 
+		else:	config_menu_value[2]="OFF" 	    
+	    if aa[0]=="enable_body_filter": 
+		if aa[1]=="1":	config_menu_value[3]="ON" 
+		else:	config_menu_value[3]="OFF"
+	    if aa[0]=="enable_attach_filter": 
+		if aa[1]=="1":	config_menu_value[4]="ON" 
+		else:	config_menu_value[4]="OFF"
+	    if aa[0]=="enable_ignore_list":
+		if aa[1]=="1":	config_menu_value[5]="ON" 
+		else:	config_menu_value[5]="OFF"
+	    if aa[0]=="drop_empty_from":
+		if aa[1]=="1":	config_menu_value[6]="ON" 
+		else:	config_menu_value[6]="OFF" 	    
+
+    
+    for satir in range(len(config_menu)):win.addstr(satir+sabit, sabitt, config_menu[satir].ljust(20)+config_menu_value[satir].ljust(5), curses.color_pair(2))
+    win.addstr(sabit, sabitt, config_menu[0].ljust(20)+config_menu_value[0].ljust(5), curses.A_REVERSE)
+
+    win.refresh()
+    satno=0;
+    callme=0
+    while 1:    
+	c = stdscr.getch()
+    	if c == ord('q'): callme=0; break
+    	elif c == curses.KEY_F9: callme=0; break
+	elif c == curses.KEY_UP:
+	    if satno>0:  
+		win.addstr(satno+sabit, sabitt, config_menu[satno].ljust(20)+config_menu_value[satno].ljust(5), curses.color_pair(2))
+		satno = satno-1
+		win.addstr(satno+sabit, sabitt, config_menu[satno].ljust(20)+config_menu_value[satno].ljust(5), curses.A_REVERSE)
+		win.refresh()
+	elif c == curses.KEY_DOWN: 
+	    if satno<len(config_menu)-1:  
+		win.addstr(satno+sabit, sabitt, config_menu[satno].ljust(20)+config_menu_value[satno].ljust(5), curses.color_pair(2))
+		satno = satno+1
+		win.addstr(satno+sabit, sabitt, config_menu[satno].ljust(20)+config_menu_value[satno].ljust(5), curses.A_REVERSE)
+		win.refresh()
+	elif c == ord('h'): 
+	    configuration_help(stdscr)
+	    callme=1; 
+	    break
+	elif c == 10: #curses.KEY_ENTER: 
+	    if satno==0: edit_conf_file(stdscr, "enable_blackhole", config_menu_value[satno]);callme=1; break  
+	    elif satno==1: edit_conf_file(stdscr,"enable_clamd", config_menu_value[satno]);callme=1;break 
+	    elif satno==2: edit_conf_file(stdscr,"enable_header_filter", config_menu_value[satno]);callme=1;break
+	    elif satno==3: edit_conf_file(stdscr,"enable_body_filter", config_menu_value[satno]);callme=1;break
+	    elif satno==4: edit_conf_file(stdscr,"enable_attach_filter", config_menu_value[satno]);callme=1;break
+	    elif satno==5: edit_conf_file(stdscr,"enable_ignore_list", config_menu_value[satno]);callme=1;break
+	    elif satno==6: edit_conf_file(stdscr,"drop_empty_from", config_menu_value[satno]);callme=1;break
+      
+    if callme==0:win.erase(); return
+    else: configuration(stdscr);return
+
+#----------------------------------------------------------------
+def edit_conf_file(stdscr, key, value):
+    try:
+	file=open(base_etc+"qsheff.conf","r")
+	conf_file=file.readlines();
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't find qsheff.conf file!")	
+	return
+
+    for sira in range(0, len(conf_file)):
+	aa=conf_file[sira].split("=")
+	if len(aa)>1:
+	    aa[0]=aa[0].replace(" ","")
+	    aa[0]=aa[0].replace(";","")
+	    aa[0]=aa[0].replace("\n","")
+	    if aa[0]==key: 
+		del conf_file[sira]
+		break
+    
+    if value=="ON": conf_file.insert(sira, key+" = 0\n")
+    else: conf_file.insert(sira, key+" = 1\n")
+    
+    try:
+	file=open(base_etc+"qsheff.conf","w")
+	file.writelines(conf_file);
+        file.close()
+    except:
+	msgdialog(stdscr, "Can't write qsheff.conf file!")	
+	return
+    return 
+#----------------------------------------------------------------    
+def attach_menu_help(stdscr):
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    msgwin=stdscr.subwin(20, 76, 2, 1)
+    msgwin.clear()
+    msgwin.addstr(1, 25, " Attach Settings Help ".center(20), curses.A_REVERSE )
+    msgwin.addstr(17, 30, "  OK  ".center(5), curses.A_REVERSE )
+    msgwin.addstr(3, 5, """ 
+        
+    Samples
+    .pif
+    .scr
+    details.zip
+    Details.zip
+    """.center(20), curses.color_pair(2) )
+    msgwin.box()
+    msgwin.refresh()
+    while 1:    
+	c = stdscr.getch()
+    	if c == 10:
+	    msgwin.erase();return 
+#----------------------------------------------------------------
+def rules_menu_help(stdscr):
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    msgwin=stdscr.subwin(20, 76, 2, 1)
+    msgwin.clear()
+    msgwin.addstr(1, 25, " Rules Help ".center(20), curses.A_REVERSE )
+    msgwin.addstr(17, 30, "  OK  ".center(5), curses.A_REVERSE )
+    msgwin.addstr(2, 1, """  a=all b=body s=subject h=header
+    a:(word1)(word2)...(wordN)        b:(word1)(word2)...(wordN)
+    s:(word1)(word2 word3) body sample: Angela MERKEL -> b:(Angela)(MERKEL)
+    
+    If you want to search a rule at the begining
+    of word, use a blank before rule.
+    b:( spamatbegining)
+    
+    If you want to search a rule at the end of 
+    word, use a blank after rule.
+    s:(spamatend )
+    
+    If you want to search a rule in anywhere of 
+    word, don't use blank.
+    h:(rule)
+    """.center(20), curses.color_pair(2) )
+    msgwin.box()
+    msgwin.refresh()
+    while 1:    
+	c = stdscr.getch()
+    	if c == 10:
+	    msgwin.erase();return 
+#----------------------------------------------------------------
+def configuration_help(stdscr):
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    msgwin=stdscr.subwin(20, 76, 2, 1)
+    msgwin.clear()
+    msgwin.addstr(1, 25, " Configurations Help ".center(20), curses.A_REVERSE )
+    msgwin.addstr(17, 30, "  OK  ".center(5), curses.A_REVERSE )
+    msgwin.addstr(3, 4, """- Black hole : Don't reply in Virus or SPAM mail (very usefull)
+    - Clamd active : Enable/Disable internal clamd
+    - Header filter : Enable/Disable header filter
+    - Subject filter : Enable/Disable subject filter
+    - Body filter : Enable/Disable subject filter
+    - Attach filter : Enable/Disable attach filter
+    - Ignore list : Enable/Disable ignore filter
+    - Drop empty from : Enable/Disable drop empty from  
+    """.center(20), curses.color_pair(2) )
+    msgwin.box()
+    msgwin.refresh()
+    while 1:    
+	c = stdscr.getch()
+    	if c == 10:
+	    msgwin.erase();return 
+
+#----------------------------------------------------------------
+def msgyesno(stdscr, message):
+    msgwin=stdscr.subwin(5, 40, 5, 20)
+    msgwin.clear()
+    msgwin.box()
+    msgwin.addstr(1, 5, message.center(20), curses.color_pair(2) )
+    msgwin.addstr(3, 13, " Yes ", curses.A_REVERSE )
+    msgwin.addstr(3, 23, " No ", curses.color_pair(2) )
+    msgwin.refresh()
+    satno=1;
+    while 1:    
+	c = stdscr.getch()
+    	if c == 10:  msgwin.erase(); return satno
+	elif c == curses.KEY_RIGHT:
+	    if satno==1:  
+		msgwin.addstr(3, 13, " Yes ", curses.color_pair(2) )
+		satno = 0
+		msgwin.addstr(3, 23, " No ", curses.A_REVERSE)
+		msgwin.refresh()
+	elif c == curses.KEY_LEFT: 
+	    if satno==0:
+		msgwin.addstr(3, 13, " Yes ", curses.A_REVERSE )
+		satno = 1
+		msgwin.addstr(3, 23, " No ", curses.color_pair(2) )
+		msgwin.refresh()
+#----------------------------------------------------------------
+def msgdialog(stdscr, message):
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
+    msgwin=stdscr.subwin(5, 50, 5, 20)
+    msgwin.clear()
+    msgwin.addstr(1, 5, message.center(20), curses.color_pair(2) )
+    msgwin.addstr(3, 23, "  OK  ".center(6), curses.A_REVERSE )
+    msgwin.box()
+    msgwin.refresh()
+    while 1:    
+	c = stdscr.getch()
+    	if c == 10:
+	    msgwin.erase();return 
+#----------------------------------------------------------------
+def msgedit(stdscr, message):
+    curses.curs_set(1)
+    win = stdscr.subwin(5, 50, 5, 20)
+    win.clear()
+    win.addstr(1, 1, message)
+    win.box()
+    stdscr.refresh()
+    curses.echo()
+    aa=win.getstr(3,3)
+    curses.noecho()
+    win.erase()
+    curses.curs_set(0)
+    return aa
+#----------------------------------------------------------------    
+def file_control(directory):
+    ok="true"    
+    try:open(directory+"qsheff.conf", "r")
+    except:ok="false"
+    return ok
+#----------------------------------------------------------------
+if __name__=='__main__':
+    stdscr=curses.initscr()
+    stdscr.keypad(1)
+    curses.cbreak()	
+    curses.halfdelay(1)
+    curses.curs_set(0)
+    curses.start_color()
+
+    home=os.environ["HOME"]
+
+    if file_control(base_etc)=="false":
+	try:
+	    file=open(home+"/.qsheffmanager", "r")
+	    base_etc=file.readline();
+	    file.close()
+	    curses.curs_set(1)
+	    if file_control(base_etc)=="false":
+		base_etc=msgedit(stdscr, "can't find qSheff configuration directory \n write now or please edit ~/.qsheffmanager")
+		file=open(home+"/.qsheffmanager", "w"); 
+		file.write(base_etc)
+		file.close()		
+	except:	    
+	    base_etc=msgedit(stdscr, "can't find qSheff configuration directory \n write nor or please edit ~/.qsheffmanager")
+	    file=open(home+"/.qsheffmanager", "w"); 
+	    file.write(base_etc)
+	    file.close()
+    
+    curses.curs_set(0)
+    curses.noecho()
+    main_menu_list(stdscr)
+	
+    stdscr.clear()
+    curses.echo()
+    curses.nocbreak()
+    curses.curs_set(1)	
+    curses.endwin()
+
+    print'Have a nice qmailing.'
